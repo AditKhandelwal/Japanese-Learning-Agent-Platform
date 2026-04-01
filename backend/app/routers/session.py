@@ -1,0 +1,145 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
+import uuid
+from datetime import datetime, timezone
+
+from app.db.database import get_db
+from app.db.models import Session, UserItemState, Item, Response
+from app.ml import knowledge_tracing as kt
+from app.models.schemas import SessionStartRequest, SessionOut, GradeRequest, GradeResult
+
+router = APIRouter()
+
+
+@router.post("/", response_model=SessionOut)
+async def start_session(body: SessionStartRequest, db: AsyncSession = Depends(get_db)):
+    session = Session(
+        id=str(uuid.uuid4()),
+        user_id=body.user_id,
+        mode=body.mode.value,
+        started_at=datetime.now(timezone.utc),
+    )
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+    return SessionOut(
+        id=session.id,
+        user_id=session.user_id,
+        mode=session.mode,
+        started_at=session.started_at.isoformat(),
+    )
+
+
+@router.post("/{session_id}/end")
+async def end_session(session_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session.ended_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"status": "ended"}
+
+
+@router.post("/grade", response_model=GradeResult)
+async def grade_response(body: GradeRequest, db: AsyncSession = Depends(get_db)):
+    # Load or create user item state
+    state_result = await db.execute(
+        select(UserItemState).where(
+            and_(UserItemState.user_id == body.user_id, UserItemState.item_id == body.item_id)
+        )
+    )
+    db_state = state_result.scalar_one_or_none()
+
+    # Load item for its jlpt_level
+    item_result = await db.execute(select(Item).where(Item.id == body.item_id))
+    item = item_result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # Build BKT state object
+    if db_state:
+        state = kt.ItemKnowledgeState(
+            item_id=body.item_id,
+            p_know=db_state.p_know,
+            review_count=db_state.review_count,
+            correct_count=db_state.correct_count,
+            correct_streak=db_state.correct_streak,
+            avg_latency_ms=db_state.avg_latency_ms,
+            last_reviewed=db_state.last_reviewed,
+            next_review_due=db_state.next_review_due,
+        )
+    else:
+        state = kt.initial_state(body.item_id, item.jlpt_level)
+
+    p_know_before = state.p_know
+
+    # Run BKT update
+    new_state = kt.update(state, body.correct, body.latency_ms)
+
+    # Persist updated state
+    now = datetime.now(timezone.utc)
+    if db_state:
+        db_state.p_know          = new_state.p_know
+        db_state.review_count    = new_state.review_count
+        db_state.correct_count   = new_state.correct_count
+        db_state.correct_streak  = new_state.correct_streak
+        db_state.avg_latency_ms  = new_state.avg_latency_ms
+        db_state.last_reviewed   = new_state.last_reviewed
+        db_state.next_review_due = new_state.next_review_due
+        db_state.updated_at      = now
+    else:
+        db_state = UserItemState(
+            id=str(uuid.uuid4()),
+            user_id=body.user_id,
+            item_id=body.item_id,
+            p_know=new_state.p_know,
+            review_count=new_state.review_count,
+            correct_count=new_state.correct_count,
+            correct_streak=new_state.correct_streak,
+            avg_latency_ms=new_state.avg_latency_ms,
+            last_reviewed=new_state.last_reviewed,
+            next_review_due=new_state.next_review_due,
+            introduced=True,
+            updated_at=now,
+        )
+        db.add(db_state)
+
+    # Record the response event
+    response = Response(
+        id=str(uuid.uuid4()),
+        session_id=body.session_id,
+        user_id=body.user_id,
+        item_id=body.item_id,
+        correct=body.correct,
+        user_answer=body.user_answer,
+        latency_ms=body.latency_ms,
+        p_know_before=p_know_before,
+        p_know_after=new_state.p_know,
+        created_at=now,
+    )
+    db.add(response)
+    await db.commit()
+
+    feedback = _feedback_text(body.correct, p_know_before, new_state.p_know)
+
+    return GradeResult(
+        item_id=body.item_id,
+        correct=body.correct,
+        p_know_before=round(p_know_before, 3),
+        p_know_after=round(new_state.p_know, 3),
+        next_review_due=new_state.next_review_due.isoformat(),
+        feedback=feedback,
+    )
+
+
+def _feedback_text(correct: bool, before: float, after: float) -> str:
+    delta = after - before
+    if correct:
+        if after >= 0.90:
+            return f"Excellent! p_know {before:.0%} → {after:.0%} ↑  Next review in several days."
+        return f"Correct! p_know {before:.0%} → {after:.0%} ↑"
+    else:
+        return f"Not quite. p_know {before:.0%} → {after:.0%}  Review scheduled soon."

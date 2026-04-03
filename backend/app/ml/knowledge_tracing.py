@@ -181,6 +181,43 @@ def bulk_priority(states: list[ItemKnowledgeState]) -> list[tuple[ItemKnowledgeS
     return sorted(scored, key=lambda x: x[1], reverse=True)
 
 
+# p_know seeds by JLPT self-assessment level.
+# Each entry covers all levels — lower levels get high p_know if user is advanced.
+ONBOARDING_JLPT_SEEDS: dict[str, dict[str, float]] = {
+    "unsure": {"N5": 0.10, "N4": 0.05, "N3": 0.02, "N2": 0.01, "N1": 0.01},
+    "n5":     {"N5": 0.50, "N4": 0.10, "N3": 0.02, "N2": 0.01, "N1": 0.01},
+    "n4":     {"N5": 0.85, "N4": 0.55, "N3": 0.05, "N2": 0.02, "N1": 0.01},
+    "n3":     {"N5": 0.90, "N4": 0.85, "N3": 0.55, "N2": 0.05, "N2": 0.02},
+    "n2":     {"N5": 0.92, "N4": 0.90, "N3": 0.85, "N2": 0.55, "N1": 0.05},
+    "n1":     {"N5": 0.95, "N4": 0.92, "N3": 0.90, "N2": 0.85, "N1": 0.60},
+}
+
+ONBOARDING_KANA_SEEDS: dict[str, float] = {
+    "yes":      0.90,
+    "a_little": 0.45,
+    "no":       0.05,
+}
+
+
+def seed_p_know_from_onboarding(
+    jlpt_level: str,
+    knows_hiragana: str,
+    knows_katakana: str,
+    jlpt_self_assessment: str,
+) -> float:
+    """
+    Return the initial p_know for a single item given onboarding answers.
+    jlpt_level: the item's level (hiragana | katakana | N5 | N4 | N3 | N2 | N1)
+    """
+    if jlpt_level == "hiragana":
+        return ONBOARDING_KANA_SEEDS.get(knows_hiragana, 0.05)
+    if jlpt_level == "katakana":
+        return ONBOARDING_KANA_SEEDS.get(knows_katakana, 0.05)
+
+    seeds = ONBOARDING_JLPT_SEEDS.get(jlpt_self_assessment.lower(), ONBOARDING_JLPT_SEEDS["unsure"])
+    return seeds.get(jlpt_level, DEFAULT_P_INIT)
+
+
 def estimate_placement_p_know(
     correct_by_level: dict[str, tuple[int, int]]
 ) -> dict[str, float]:

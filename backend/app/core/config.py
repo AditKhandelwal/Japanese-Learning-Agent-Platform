@@ -14,9 +14,14 @@ class Settings(BaseSettings):
     claude_fast_model: str  = "claude-haiku-4-5-20251001"   # tool calls, grading
     claude_smart_model: str = "claude-sonnet-4-6"            # explanations, summaries
 
+    # Supabase
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_role_key: str = ""
+    supabase_jwt_secret: str = ""
+
     # App
     debug: bool = False
-    secret_key: str = "change-me-in-production"
 
 
 settings = Settings()

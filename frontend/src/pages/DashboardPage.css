@@ -1,0 +1,227 @@
+.dash-root {
+  min-height: 100vh;
+  background: #0a0a14;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Header ── */
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dash-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.dash-logo-ja {
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff6b9d, #ff9f43, #e056fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dash-logo-en {
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+}
+
+.dash-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dash-username {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.dash-signout {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.dash-signout:hover {
+  border-color: rgba(255, 107, 157, 0.4);
+  color: #ff6b9d;
+}
+
+/* ── Main ── */
+.dash-main {
+  flex: 1;
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 56px 24px 64px;
+}
+
+.dash-welcome {
+  margin-bottom: 48px;
+}
+
+.dash-greeting {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.dash-subtext {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ── Featured cards (Lesson + Recall) ── */
+.dash-featured-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* ── Secondary cards (Reading, Production, Conversation) ── */
+.dash-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* ── Card base ── */
+.dash-card {
+  background: rgba(15, 15, 28, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border, rgba(255, 107, 157, 0.2));
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 0 32px var(--glow, rgba(255, 107, 157, 0.08));
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.dash-card:hover {
+  border-color: color-mix(in srgb, var(--border, rgba(255, 107, 157, 0.3)) 100%, white 20%);
+  box-shadow: 0 0 48px var(--glow, rgba(255, 107, 157, 0.12));
+  transform: translateY(-2px);
+}
+
+/* Featured card extras */
+.dash-card--featured {
+  padding: 32px;
+}
+
+.dash-card-kanji {
+  font-size: 3.5rem;
+  font-family: 'MS Gothic', monospace;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dash-card-kanji--sm {
+  font-size: 2.4rem;
+}
+
+.dash-card-body {
+  flex: 1;
+}
+
+.dash-card-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.dash-card--secondary .dash-card-name {
+  font-size: 1rem;
+}
+
+.dash-card-desc {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.55;
+}
+
+.dash-card--secondary .dash-card-desc {
+  font-size: 0.82rem;
+}
+
+/* ── Buttons ── */
+.dash-start-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: opacity 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+
+.dash-start-btn:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.dash-start-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Outline variant for secondary cards */
+.dash-start-btn--outline {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  padding: 8px 16px;
+}
+
+.dash-start-btn--outline:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+/* ── Responsive ── */
+@media (max-width: 720px) {
+  .dash-header {
+    padding: 16px 20px;
+  }
+
+  .dash-main {
+    padding: 36px 16px 48px;
+  }
+
+  .dash-greeting {
+    font-size: 1.5rem;
+  }
+
+  .dash-featured-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}

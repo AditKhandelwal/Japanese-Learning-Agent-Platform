@@ -1,17 +1,24 @@
 """
-Data ingestion script — loads JLPT vocab, kanji, and hiragana/katakana into the DB.
+Data ingestion script — loads curriculum into the items table.
 
-Data sources (all free/open):
-  Vocabulary : https://github.com/scriptin/jlpt-vocab  (MIT)
-  Kanji      : KANJIDIC2 from EDRDG  (CC Attribution)
-  Grammar    : static JSON files in data/raw/grammar/
+Sources:
+  Kana    : hardcoded (46 hiragana + 46 katakana)
+  Vocab   : data/raw/vocab/jlpt_genki_combined_vocab.csv
+  Kanji   : data/raw/kanji/jlpt_all_levels_kanji_code_friendly.csv
+  Grammar : data/raw/grammar/JLPT Grammar.xlsx - full list.csv
 
-Run: python data/ingest.py
+Idempotent: uses deterministic UUID5 keyed on (type, japanese) so
+re-runs never duplicate rows — ON CONFLICT (id) DO NOTHING is safe.
+
+Run from backend/:
+  python data/ingest.py
 """
 
 import asyncio
+import csv
 import json
 import os
+import ssl
 import uuid
 from pathlib import Path
 
@@ -20,12 +27,34 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-RAW_DIR   = Path(__file__).parent / "raw"
-DB_URL    = os.getenv("DATABASE_URL", "").replace("+asyncpg", "")  # asyncpg uses plain postgres:// URLs
+RAW_DIR  = Path(__file__).parent / "raw"
+_raw_url = os.getenv("DATABASE_URL", "")
+DB_URL   = _raw_url.replace("+asyncpg", "").replace("postgresql+asyncpg", "postgresql")
+
+# Stable namespace for deterministic UUIDs — never change this.
+_NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+
+BATCH_SIZE = 500
+
+
+def stable_id(item_type: str, japanese: str) -> str:
+    """Deterministic UUID5 based on (type, japanese). Same input → same UUID."""
+    return str(uuid.uuid5(_NS, f"{item_type}:{japanese}"))
+
+
+async def batch_insert(conn, rows: list[tuple]):
+    """Insert a batch of item rows, skipping duplicates by id."""
+    if not rows:
+        return
+    await conn.executemany("""
+        INSERT INTO items (id, type, japanese, reading, meaning, jlpt_level, tags, examples, extra)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (id) DO NOTHING
+    """, rows)
 
 
 # ---------------------------------------------------------------------------
-# Hiragana + Katakana — hardcoded (46 characters each)
+# Hiragana + Katakana (hardcoded)
 # ---------------------------------------------------------------------------
 
 HIRAGANA = [
@@ -55,124 +84,248 @@ KATAKANA = [
 ]
 
 
-async def ingest_scripts(conn):
-    print("Ingesting hiragana...")
+async def ingest_kana(conn):
+    print("Ingesting hiragana + katakana...")
+    rows = []
     for char, romaji in HIRAGANA:
-        await conn.execute("""
-            INSERT INTO items (id, type, japanese, reading, meaning, jlpt_level, tags, examples, extra)
-            VALUES ($1, 'vocab', $2, $3, $4, 'hiragana', $5, $6, $7)
-            ON CONFLICT (id) DO NOTHING
-        """,
-            str(uuid.uuid4()), char, romaji, romaji,
+        rows.append((
+            stable_id("vocab", char), "vocab", char, romaji, romaji,
+            "hiragana",
             json.dumps(["hiragana", "kana"]),
             json.dumps([]),
-            json.dumps({"row": _hiragana_row(char)}),
-        )
-
-    print("Ingesting katakana...")
+            json.dumps({}),
+        ))
     for char, romaji in KATAKANA:
-        await conn.execute("""
-            INSERT INTO items (id, type, japanese, reading, meaning, jlpt_level, tags, examples, extra)
-            VALUES ($1, 'vocab', $2, $3, $4, 'katakana', $5, $6, $7)
-            ON CONFLICT (id) DO NOTHING
-        """,
-            str(uuid.uuid4()), char, romaji, romaji,
+        rows.append((
+            stable_id("vocab", char), "vocab", char, romaji, romaji,
+            "katakana",
             json.dumps(["katakana", "kana"]),
             json.dumps([]),
             json.dumps({}),
-        )
-    print(f"  Done: {len(HIRAGANA)} hiragana, {len(KATAKANA)} katakana")
-
-
-def _hiragana_row(char: str) -> str:
-    rows = {
-        "あいうえお": "a-row",
-        "かきくけこ": "k-row",
-        "さしすせそ": "s-row",
-        "たちつてと": "t-row",
-        "なにぬねの": "n-row",
-        "はひふへほ": "h-row",
-        "まみむめも": "m-row",
-        "やゆよ":     "y-row",
-        "らりるれろ": "r-row",
-        "わをん":     "w-row",
-    }
-    for group, row in rows.items():
-        if char in group:
-            return row
-    return "unknown"
+        ))
+    await batch_insert(conn, rows)
+    print(f"  {len(HIRAGANA)} hiragana, {len(KATAKANA)} katakana")
 
 
 # ---------------------------------------------------------------------------
-# JLPT Vocabulary — expects data/raw/vocab/N5.json, N4.json, etc.
-# Each file: list of {word, reading, meaning, tags?}
+# Vocab: jlpt_genki_combined_vocab.csv
+#
+# Columns: vocab_id, merge_key, kana, kanji, jlpt_level, jlpt_numeric,
+#          english_definitions_json, sources_json, genki_chapters_json,
+#          jmdict_seq_json, mapping_methods_json, matched_on_json
 # ---------------------------------------------------------------------------
 
 async def ingest_vocab(conn):
-    for level in ["N5", "N4", "N3"]:
-        vocab_file = RAW_DIR / "vocab" / f"{level}.json"
-        if not vocab_file.exists():
-            print(f"  Skipping {level} vocab — file not found at {vocab_file}")
-            continue
+    csv_path = RAW_DIR / "vocab" / "jlpt_genki_combined_vocab.csv"
+    if not csv_path.exists():
+        print(f"  Skipping vocab — not found: {csv_path}")
+        return
 
-        with open(vocab_file) as f:
-            items = json.load(f)
+    print("Ingesting vocab...")
+    rows = []
+    skipped = 0
 
-        count = 0
-        for item in items:
-            await conn.execute("""
-                INSERT INTO items (id, type, japanese, reading, meaning, jlpt_level, tags, examples, extra)
-                VALUES ($1, 'vocab', $2, $3, $4, $5, $6, $7, $8)
-                ON CONFLICT (id) DO NOTHING
-            """,
-                str(uuid.uuid4()),
-                item["word"],
-                item.get("reading", item["word"]),
-                item["meaning"],
-                level,
-                json.dumps(item.get("tags", [])),
-                json.dumps(item.get("examples", [])),
-                json.dumps(item.get("extra", {})),
-            )
-            count += 1
+    with open(csv_path, encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            kana  = (row.get("kana") or "").strip()
+            kanji = (row.get("kanji") or "").strip()
 
-        print(f"  {level} vocab: {count} items")
+            # Use kanji form as display when available, else fall back to kana
+            japanese = kanji if kanji else kana
+            reading  = kana if kanji else ""
+
+            if not japanese:
+                skipped += 1
+                continue
+
+            jlpt_level = (row.get("jlpt_level") or "").strip()
+            if not jlpt_level:
+                skipped += 1
+                continue
+
+            # Parse the first English definition from the JSON array
+            try:
+                definitions = json.loads(row.get("english_definitions_json") or "[]")
+                meaning = definitions[0] if definitions else ""
+            except (json.JSONDecodeError, IndexError):
+                meaning = ""
+
+            if not meaning:
+                skipped += 1
+                continue
+
+            # Build tags
+            tags = [jlpt_level.lower(), "vocab"]
+            try:
+                genki_chapters = json.loads(row.get("genki_chapters_json") or "[]")
+                if genki_chapters:
+                    tags.append("genki")
+            except json.JSONDecodeError:
+                genki_chapters = []
+
+            try:
+                sources = json.loads(row.get("sources_json") or "[]")
+            except json.JSONDecodeError:
+                sources = []
+
+            extra = {"sources": sources, "genki_chapters": genki_chapters}
+
+            rows.append((
+                stable_id("vocab", japanese), "vocab", japanese, reading, meaning,
+                jlpt_level,
+                json.dumps(tags),
+                json.dumps([]),
+                json.dumps(extra),
+            ))
+
+            if len(rows) >= BATCH_SIZE:
+                await batch_insert(conn, rows)
+                rows = []
+
+    await batch_insert(conn, rows)
+    total = await conn.fetchval("SELECT COUNT(*) FROM items WHERE type = 'vocab'")
+    print(f"  Done. vocab rows in DB: {total}  (skipped during parse: {skipped})")
 
 
 # ---------------------------------------------------------------------------
-# Grammar — expects data/raw/grammar/N5.json, N4.json
-# Each file: list of {pattern, meaning, structure?, examples?, tags?}
+# Kanji: jlpt_all_levels_kanji_code_friendly.csv
+#
+# Columns: row_id, jlpt_level, jlpt_numeric, index_within_level, kanji,
+#          onyomi_raw, kunyomi_raw, meanings_raw,
+#          onyomi_list_json, kunyomi_list_json, meanings_list_json,
+#          vocab_count, vocab_json
+# ---------------------------------------------------------------------------
+
+async def ingest_kanji(conn):
+    csv_path = RAW_DIR / "kanji" / "jlpt_all_levels_kanji_code_friendly.csv"
+    if not csv_path.exists():
+        print(f"  Skipping kanji — not found: {csv_path}")
+        return
+
+    print("Ingesting kanji...")
+    rows = []
+    skipped = 0
+
+    with open(csv_path, encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            japanese = (row.get("kanji") or "").strip()
+            if not japanese:
+                skipped += 1
+                continue
+
+            jlpt_level = (row.get("jlpt_level") or "").strip()
+            if not jlpt_level:
+                skipped += 1
+                continue
+
+            onyomi_raw  = (row.get("onyomi_raw") or "").strip()
+            kunyomi_raw = (row.get("kunyomi_raw") or "").strip()
+            meanings_raw = (row.get("meanings_raw") or "").strip()
+
+            if not meanings_raw:
+                skipped += 1
+                continue
+
+            # reading = on-yomi; store both in extra
+            reading = onyomi_raw
+
+            try:
+                onyomi_list  = json.loads(row.get("onyomi_list_json") or "[]")
+            except json.JSONDecodeError:
+                onyomi_list = []
+            try:
+                kunyomi_list = json.loads(row.get("kunyomi_list_json") or "[]")
+            except json.JSONDecodeError:
+                kunyomi_list = []
+
+            # Use up to 3 vocab examples as item examples
+            try:
+                vocab_list = json.loads(row.get("vocab_json") or "[]")
+                examples = [
+                    {"sentence": v.get("expression", ""), "translation": v.get("meaning", "")}
+                    for v in vocab_list[:3]
+                ]
+            except json.JSONDecodeError:
+                examples = []
+
+            extra = {
+                "onyomi":   onyomi_list,
+                "kunyomi":  kunyomi_list,
+                "kunyomi_raw": kunyomi_raw,
+            }
+
+            tags = [jlpt_level.lower(), "kanji"]
+
+            rows.append((
+                stable_id("kanji", japanese), "kanji", japanese, reading, meanings_raw,
+                jlpt_level,
+                json.dumps(tags),
+                json.dumps(examples),
+                json.dumps(extra),
+            ))
+
+            if len(rows) >= BATCH_SIZE:
+                await batch_insert(conn, rows)
+                rows = []
+
+    await batch_insert(conn, rows)
+    total = await conn.fetchval("SELECT COUNT(*) FROM items WHERE type = 'kanji'")
+    print(f"  Done. kanji rows in DB: {total}  (skipped during parse: {skipped})")
+
+
+# ---------------------------------------------------------------------------
+# Grammar: JLPT Grammar.xlsx - full list.csv
+#
+# No header row. Columns (11 total):
+#   [0] jlpt_level  [1] index  [2] pattern  [3] romaji  [4] meaning
+#   [5-9] empty     [10] source note
 # ---------------------------------------------------------------------------
 
 async def ingest_grammar(conn):
-    for level in ["N5", "N4"]:
-        grammar_file = RAW_DIR / "grammar" / f"{level}.json"
-        if not grammar_file.exists():
-            print(f"  Skipping {level} grammar — file not found at {grammar_file}")
-            continue
+    csv_path = RAW_DIR / "grammar" / "JLPT Grammar.xlsx - full list.csv"
+    if not csv_path.exists():
+        print(f"  Skipping grammar — not found: {csv_path}")
+        return
 
-        with open(grammar_file) as f:
-            items = json.load(f)
+    print("Ingesting grammar...")
+    rows = []
+    skipped = 0
 
-        count = 0
-        for item in items:
-            await conn.execute("""
-                INSERT INTO items (id, type, japanese, reading, meaning, jlpt_level, tags, examples, extra)
-                VALUES ($1, 'grammar', $2, $3, $4, $5, $6, $7, $8)
-                ON CONFLICT (id) DO NOTHING
-            """,
-                str(uuid.uuid4()),
-                item["pattern"],
-                item.get("reading", item["pattern"]),
-                item["meaning"],
-                level,
-                json.dumps(item.get("tags", ["grammar"])),
-                json.dumps(item.get("examples", [])),
-                json.dumps({"structure": item.get("structure", "")}),
-            )
-            count += 1
+    with open(csv_path, encoding="utf-8-sig", newline="") as f:
+        reader = csv.reader(f)
+        for cols in reader:
+            if len(cols) < 5:
+                skipped += 1
+                continue
 
-        print(f"  {level} grammar: {count} items")
+            jlpt_level = cols[0].strip()
+            japanese   = cols[2].strip()  # grammar pattern
+            reading    = cols[3].strip()  # romaji
+            meaning    = cols[4].strip()
+
+            if not japanese or not meaning or not jlpt_level:
+                skipped += 1
+                continue
+
+            tags = [jlpt_level.lower(), "grammar"]
+
+            rows.append((
+                stable_id("grammar", japanese), "grammar", japanese, reading, meaning,
+                jlpt_level,
+                json.dumps(tags),
+                json.dumps([]),
+                json.dumps({}),
+            ))
+
+            if len(rows) >= BATCH_SIZE:
+                await batch_insert(conn, rows)
+                rows = []
+
+    await batch_insert(conn, rows)
+    total = await conn.fetchval("SELECT COUNT(*) FROM items WHERE type = 'grammar'")
+    print(f"  Done. grammar rows in DB: {total}  (skipped during parse: {skipped})")
 
 
 # ---------------------------------------------------------------------------
@@ -180,15 +333,31 @@ async def ingest_grammar(conn):
 # ---------------------------------------------------------------------------
 
 async def main():
-    print(f"Connecting to: {DB_URL[:40]}...")
-    conn = await asyncpg.connect(DB_URL)
+    if not DB_URL:
+        raise RuntimeError("DATABASE_URL not set in .env")
+
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+
+    print(f"Connecting to DB...")
+    conn = await asyncpg.connect(DB_URL, ssl=ssl_ctx)
+
     try:
-        await ingest_scripts(conn)
-        print("\nIngesting vocabulary...")
+        await ingest_kana(conn)
+        print()
         await ingest_vocab(conn)
-        print("\nIngesting grammar...")
+        print()
+        await ingest_kanji(conn)
+        print()
         await ingest_grammar(conn)
-        print("\nIngestion complete.")
+
+        total = await conn.fetchval("SELECT COUNT(*) FROM items")
+        by_type = await conn.fetch("SELECT type, COUNT(*) FROM items GROUP BY type ORDER BY type")
+        print(f"\n{'-'*40}")
+        print(f"Total items in DB: {total}")
+        for record in by_type:
+            print(f"  {record['type']:10s}  {record['count']}")
     finally:
         await conn.close()
 

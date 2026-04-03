@@ -30,32 +30,16 @@ class SessionMode(str, Enum):
 
 # --- Onboarding ---
 
-class OnboardingScripts(BaseModel):
-    knows_hiragana: bool
-    knows_katakana: bool
-
-
-class OnboardingSelfAssessment(BaseModel):
-    vocabulary: int        # 1-10
-    grammar: int           # 1-10
-    reading: int           # 1-10
-    kanji: int             # 1-10
-    reported_jlpt: Optional[str] = None
-
-
 class OnboardingCompleteRequest(BaseModel):
-    user_id: str
-    scripts: OnboardingScripts
-    self_assessment: OnboardingSelfAssessment
-    took_assessment: bool
-    placement_level: Optional[str] = None
+    prior_study: str                  # "never" | "some" | "casual" | "serious"
+    knows_hiragana: str               # "no" | "a_little" | "yes"
+    knows_katakana: str               # "no" | "a_little" | "yes"
+    kanji_level: str                  # "none" | "few" | "n5" | "n4" | "n3" | "n2" | "n1"
+    jlpt_self_assessment: str         # "n5" | "n4" | "n3" | "n2" | "n1" | "unsure"
+    study_frequency: str              # "casual" | "regular" | "serious" | "intensive"
 
 
 # --- Users ---
-
-class UserCreate(BaseModel):
-    username: str
-
 
 class UserOut(BaseModel):
     id: str

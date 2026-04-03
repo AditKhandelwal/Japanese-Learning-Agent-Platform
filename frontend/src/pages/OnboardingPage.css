@@ -1,0 +1,223 @@
+.onboarding-root {
+  min-height: 100vh;
+  background: #0a0a14;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 16px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.onboarding-header {
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.onboarding-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff6b9d, #ff9f43, #e056fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.onboarding-header p {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.onboarding-progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b9d, #e056fd);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.onboarding-step-count {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Card */
+.onboarding-card {
+  background: rgba(15, 15, 28, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 107, 157, 0.2);
+  border-radius: 16px;
+  padding: 40px 36px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(255, 107, 157, 0.08);
+}
+
+.onboarding-examples {
+  text-align: center;
+  font-size: 1.6rem;
+  color: rgba(255, 159, 67, 0.8);
+  font-family: 'MS Gothic', monospace;
+  letter-spacing: 0.15em;
+  margin-bottom: 20px;
+}
+
+.onboarding-question {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+/* Options */
+.onboarding-options.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.onboarding-options.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.onboarding-option {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 14px 18px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  text-align: left;
+}
+
+.onboarding-option:hover:not(:disabled) {
+  border-color: rgba(255, 107, 157, 0.5);
+  background: rgba(255, 107, 157, 0.08);
+  transform: translateY(-1px);
+}
+
+.onboarding-option.selected {
+  border-color: #ff6b9d;
+  background: rgba(255, 107, 157, 0.12);
+}
+
+.opt-label {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.opt-sub {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+}
+
+.onboarding-error {
+  color: #ff6b9d;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 16px;
+}
+
+.onboarding-back {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 20px;
+  padding: 0;
+  display: block;
+}
+
+.onboarding-back:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Confirm page */
+.confirm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirm-row {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.confirm-question {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 4px;
+}
+
+.confirm-answer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.confirm-answer {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.confirm-edit {
+  background: none;
+  border: 1px solid rgba(255, 107, 157, 0.4);
+  border-radius: 6px;
+  color: #ff6b9d;
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.confirm-edit:hover {
+  background: rgba(255, 107, 157, 0.1);
+}
+
+.onboarding-submit-btn {
+  width: 100%;
+  margin-top: 28px;
+  padding: 12px;
+  background: linear-gradient(135deg, #ff6b9d, #e056fd);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.onboarding-submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.onboarding-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

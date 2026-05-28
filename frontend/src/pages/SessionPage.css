@@ -1,0 +1,329 @@
+.sess-root {
+  height: 100vh;
+  background: #0a0a14;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Header ── */
+.sess-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.sess-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.sess-logo-ja {
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff6b9d, #ff9f43, #e056fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sess-logo-en {
+  font-size: 0.72rem;
+  letter-spacing: 0.25em;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+}
+
+.sess-mode-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--mode-border, rgba(255, 107, 157, 0.2));
+  border-radius: 10px;
+  padding: 6px 18px;
+  box-shadow: 0 0 20px var(--mode-glow, rgba(255, 107, 157, 0.08));
+}
+
+.sess-mode-kanji {
+  font-size: 1.4rem;
+  font-family: 'MS Gothic', monospace;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sess-mode-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.04em;
+}
+
+.sess-end-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.sess-end-btn:hover {
+  border-color: rgba(255, 107, 157, 0.4);
+  color: #ff6b9d;
+}
+
+/* ── Messages area ── */
+.sess-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+  width: 100%;
+  align-self: center;
+  box-sizing: border-box;
+}
+
+.sess-messages::-webkit-scrollbar { width: 4px; }
+.sess-messages::-webkit-scrollbar-track { background: transparent; }
+.sess-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+/* ── Connecting dots (initial load) ── */
+.sess-connecting {
+  display: flex;
+  justify-content: flex-start;
+  padding-left: 42px;
+  padding-top: 8px;
+}
+
+.sess-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 14px 18px;
+  background: rgba(15, 15, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0 14px 14px 14px;
+}
+
+.sess-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  animation: dot-pulse 1.3s ease-in-out infinite;
+}
+
+.sess-dots span:nth-child(2) { animation-delay: 0.2s; }
+.sess-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40%           { opacity: 1;   transform: scale(1);   }
+}
+
+/* ── Message rows ── */
+.sess-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.sess-row--user  { justify-content: flex-end; }
+.sess-row--agent { justify-content: flex-start; }
+.sess-row--tool  { justify-content: center; }
+
+/* ── Avatar ── */
+.sess-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'MS Gothic', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Bubbles ── */
+.sess-bubble {
+  max-width: 72%;
+  padding: 12px 16px;
+  font-size: 0.94rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sess-bubble--agent {
+  background: rgba(15, 15, 28, 0.9);
+  border: 1px solid var(--mode-border, rgba(255, 107, 157, 0.15));
+  border-radius: 0 14px 14px 14px;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 24px var(--mode-glow, rgba(255, 107, 157, 0.05));
+  min-width: 32px;
+  min-height: 20px;
+}
+
+.sess-bubble--user {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px 0 14px 14px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Streaming cursor ── */
+.sess-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: rgba(255, 255, 255, 0.55);
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  animation: blink 0.9s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ── Tool chips ── */
+.sess-tool-chip {
+  font-size: 0.72rem;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+.sess-tool-chip--active {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  animation: tool-pulse 1.6s ease-in-out infinite;
+}
+
+.sess-tool-chip--done {
+  background: rgba(29, 209, 161, 0.06);
+  border: 1px solid rgba(29, 209, 161, 0.2);
+  color: rgba(29, 209, 161, 0.55);
+}
+
+@keyframes tool-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 1;    }
+}
+
+/* ── Footer / input ── */
+.sess-footer {
+  flex-shrink: 0;
+  padding: 14px 24px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(8, 8, 18, 0.97);
+  backdrop-filter: blur(12px);
+}
+
+.sess-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.sess-textarea {
+  flex: 1;
+  background: rgba(15, 15, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: inherit;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  padding: 10px 14px;
+  resize: none;
+  outline: none;
+  min-height: 44px;
+  max-height: 160px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sess-textarea:focus {
+  border-color: var(--mode-border, rgba(255, 107, 157, 0.4));
+  box-shadow: 0 0 0 2px var(--mode-glow, rgba(255, 107, 157, 0.08));
+}
+
+.sess-textarea:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sess-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.sess-send-btn {
+  height: 44px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition: opacity 0.2s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.sess-send-btn:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.sess-send-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .sess-header {
+    padding: 14px 16px;
+  }
+
+  .sess-logo-en {
+    display: none;
+  }
+
+  .sess-messages {
+    padding: 20px 14px;
+    gap: 16px;
+  }
+
+  .sess-footer {
+    padding: 10px 14px 16px;
+  }
+
+  .sess-bubble {
+    max-width: 88%;
+    font-size: 0.88rem;
+  }
+}

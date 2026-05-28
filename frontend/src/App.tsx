@@ -5,8 +5,10 @@ import type { Session } from '@supabase/supabase-js'
 import LoginPage from './pages/LoginPage'
 import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
+import SessionPage from './pages/SessionPage'
+import RecallPage from './pages/RecallPage'
 
-type AppState = 'loading' | 'login' | 'onboarding' | 'dashboard' | 'session'
+type AppState = 'loading' | 'login' | 'onboarding' | 'dashboard' | 'session' | 'kana-guide'
 
 interface ActiveSession {
   sessionId: string
@@ -64,21 +66,37 @@ export default function App() {
   if (appState === 'loading') return null
   if (appState === 'login') return <LoginPage onSignUpComplete={() => { skipNextAuthEvent.current = true }} />
   if (appState === 'onboarding') return <OnboardingPage onComplete={() => setAppState('dashboard')} />
-  if (appState === 'session' && activeSession) {
+  if (appState === 'kana-guide') {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a14', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
-          {activeSession.mode} session · {activeSession.sessionId}
-        </p>
-        <button
-          onClick={handleEndSession}
-          style={{ background: 'none', border: '1px solid rgba(255,107,157,0.4)', borderRadius: 8, color: '#ff6b9d', padding: '8px 20px', cursor: 'pointer', fontSize: '0.9rem' }}
-        >
-          ← Back to dashboard
-        </button>
+      <div style={{ minHeight: '100vh', background: '#0a0a14', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Segoe UI, system-ui, sans-serif', gap: 16 }}>
+        <p style={{ fontSize: '3rem', fontFamily: 'MS Gothic, monospace' }}>あア</p>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Kana Guide — Coming Soon</h1>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>Full guide with charts and tips is being built.</p>
+        <button onClick={() => setAppState('dashboard')} style={{ marginTop: 8, padding: '10px 28px', background: 'linear-gradient(135deg,#48dbfb,#1dd1a1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Back to Dashboard</button>
       </div>
     )
   }
 
-  return <DashboardPage onStartSession={handleStartSession} />
+  if (appState === 'session' && activeSession) {
+    if (['recall', 'hiragana', 'katakana'].includes(activeSession.mode)) {
+      return (
+        <RecallPage
+          sessionId={activeSession.sessionId}
+          userId={activeSession.userId}
+          mode={activeSession.mode}
+          onEnd={handleEndSession}
+        />
+      )
+    }
+    return (
+      <SessionPage
+        sessionId={activeSession.sessionId}
+        userId={activeSession.userId}
+        mode={activeSession.mode}
+        onEnd={handleEndSession}
+      />
+    )
+  }
+
+  return <DashboardPage onStartSession={handleStartSession} onKanaGuide={() => setAppState('kana-guide')} />
 }

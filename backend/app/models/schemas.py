@@ -22,6 +22,8 @@ class JLPTLevel(str, Enum):
 class SessionMode(str, Enum):
     lesson = "lesson"
     recall = "recall"
+    hiragana = "hiragana"
+    katakana = "katakana"
     production = "production"
     conversation = "conversation"
     reading = "reading"
@@ -133,6 +135,31 @@ class PlacementResult(BaseModel):
     estimated_level: str
     scores_by_level: dict
     recommended_start: str
+
+
+# --- SRS / Recall ---
+
+class SRSRating(str, Enum):
+    again = "again"
+    hard  = "hard"
+    good  = "good"
+    easy  = "easy"
+
+
+class SRSRateRequest(BaseModel):
+    session_id: str
+    user_id:    str
+    item_id:    str
+    rating:     SRSRating
+
+
+class SRSRateResult(BaseModel):
+    item_id:         str
+    rating:          str
+    correct:         bool
+    p_know_before:   float
+    p_know_after:    float
+    next_review_due: str
 
 
 # --- Stats ---

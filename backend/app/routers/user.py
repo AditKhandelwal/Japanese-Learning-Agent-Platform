@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import datetime, timezone
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timezone, timedelta
 
 from app.db.database import get_db
 from app.db.models import User, Item, UserItemState
@@ -9,6 +10,15 @@ from app.models.schemas import UserOut, OnboardingCompleteRequest
 from app.core.auth import get_current_user_id, verify_token
 from app.ml.knowledge_tracing import seed_p_know_from_onboarding
 from app.db.models import new_uuid
+
+def _seed_next_review_due(p_know: float, now: datetime) -> datetime | None:
+    """Schedule initial review based on seeded p_know so confident items aren't immediately due."""
+    if p_know >= 0.90: return now + timedelta(days=7)
+    if p_know >= 0.75: return now + timedelta(days=4)
+    if p_know >= 0.50: return now + timedelta(days=2)
+    if p_know >= 0.30: return now + timedelta(days=1)
+    return None  # due immediately — user doesn't know this yet
+
 
 router = APIRouter()
 
@@ -25,14 +35,27 @@ async def get_or_create_me(
     user = result.scalar_one_or_none()
 
     if not user:
-        user = User(
-            id=user_id,
-            username=username,
-            created_at=datetime.now(timezone.utc),
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        try:
+            user = User(
+                id=user_id,
+                username=username,
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        except IntegrityError:
+            # Username already taken — append short ID suffix to make it unique
+            await db.rollback()
+            username = f"{username}_{user_id[:6]}"
+            user = User(
+                id=user_id,
+                username=username,
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
 
     placement = (user.onboarding_data or {}).get("jlpt_self_assessment")
     return UserOut(id=user.id, username=user.username, onboarding_done=user.onboarding_done, placement_level=placement)
@@ -64,6 +87,7 @@ async def complete_onboarding(
     items_result = await db.execute(select(Item))
     items = items_result.scalars().all()
 
+    now = datetime.now(timezone.utc)
     for item in items:
         p_know = seed_p_know_from_onboarding(
             jlpt_level=item.jlpt_level,
@@ -71,11 +95,14 @@ async def complete_onboarding(
             knows_katakana=body.knows_katakana,
             jlpt_self_assessment=body.jlpt_self_assessment,
         )
+        next_due = _seed_next_review_due(p_know, now)
         state = UserItemState(
             id=new_uuid(),
             user_id=user_id,
             item_id=item.id,
             p_know=p_know,
+            introduced=True,
+            next_review_due=next_due,
         )
         db.add(state)
 

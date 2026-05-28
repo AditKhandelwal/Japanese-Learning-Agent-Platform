@@ -23,6 +23,9 @@ async def get_review_queue(
     n: int = 15,
     item_type: Optional[str] = None,
     focus_tag: Optional[str] = None,
+    exclude_kana: bool = False,
+    jlpt_level: Optional[str] = None,
+    ignore_due: bool = False,
 ) -> dict:
     """Return top-N items due for review, ranked by BKT priority score."""
     query = (
@@ -33,6 +36,10 @@ async def get_review_queue(
     )
     if item_type:
         query = query.where(Item.type == item_type)
+    if exclude_kana:
+        query = query.where(~Item.jlpt_level.in_(["hiragana", "katakana"]))
+    if jlpt_level:
+        query = query.where(Item.jlpt_level == jlpt_level)
 
     result = await db.execute(query)
     rows = result.all()
@@ -40,8 +47,7 @@ async def get_review_queue(
     now = datetime.now(timezone.utc)
     scored = []
     for state, item in rows:
-        # Skip items not yet due (only include if overdue or due within 10 min)
-        if state.next_review_due and state.next_review_due > now:
+        if not ignore_due and state.next_review_due and state.next_review_due > now:
             continue
 
         if focus_tag and focus_tag not in (item.tags or []):
@@ -51,7 +57,8 @@ async def get_review_queue(
         score = kt.priority_score(bkt_state)
         scored.append((state, item, score))
 
-    scored.sort(key=lambda x: x[2], reverse=True)
+    _LEVEL_ORDER = {"hiragana": 0, "katakana": 1, "N5": 2, "N4": 3, "N3": 4, "N2": 5, "N1": 6}
+    scored.sort(key=lambda x: (_LEVEL_ORDER.get(x[1].jlpt_level, 7), -x[2]))
     top = scored[:n]
 
     return {
@@ -270,6 +277,90 @@ async def introduce_items(
 
     await db.commit()
     return {"introduced": introduced, "count": len(introduced)}
+
+
+# ---------------------------------------------------------------------------
+# Tool: grade_response
+# ---------------------------------------------------------------------------
+
+async def grade_response(
+    db: AsyncSession,
+    user_id: str,
+    session_id: str,
+    item_id: str,
+    correct: bool,
+    latency_ms: int,
+    user_answer: str = "",
+) -> dict:
+    """
+    Update BKT state after Claude evaluates a user's answer.
+    Creates a Response record and updates UserItemState.p_know + next_review_due.
+    """
+    import uuid
+
+    item_result = await db.execute(select(Item).where(Item.id == item_id))
+    item = item_result.scalar_one_or_none()
+    if not item:
+        return {"error": f"Item {item_id} not found"}
+
+    state_result = await db.execute(
+        select(UserItemState).where(
+            and_(UserItemState.user_id == user_id, UserItemState.item_id == item_id)
+        )
+    )
+    db_state = state_result.scalar_one_or_none()
+
+    bkt_state = _db_to_bkt(db_state) if db_state else kt.initial_state(item_id, item.jlpt_level)
+    p_know_before = bkt_state.p_know
+    new_state = kt.update(bkt_state, correct, latency_ms)
+
+    now = datetime.now(timezone.utc)
+    if db_state:
+        db_state.p_know          = new_state.p_know
+        db_state.review_count    = new_state.review_count
+        db_state.correct_count   = new_state.correct_count
+        db_state.correct_streak  = new_state.correct_streak
+        db_state.avg_latency_ms  = new_state.avg_latency_ms
+        db_state.last_reviewed   = new_state.last_reviewed
+        db_state.next_review_due = new_state.next_review_due
+        db_state.updated_at      = now
+    else:
+        db.add(UserItemState(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            item_id=item_id,
+            p_know=new_state.p_know,
+            review_count=new_state.review_count,
+            correct_count=new_state.correct_count,
+            correct_streak=new_state.correct_streak,
+            avg_latency_ms=new_state.avg_latency_ms,
+            last_reviewed=new_state.last_reviewed,
+            next_review_due=new_state.next_review_due,
+            introduced=True,
+            updated_at=now,
+        ))
+
+    db.add(Response(
+        id=str(uuid.uuid4()),
+        session_id=session_id,
+        user_id=user_id,
+        item_id=item_id,
+        correct=correct,
+        user_answer=user_answer,
+        latency_ms=latency_ms,
+        p_know_before=p_know_before,
+        p_know_after=new_state.p_know,
+        created_at=now,
+    ))
+    await db.commit()
+
+    return {
+        "item_id":        item_id,
+        "correct":        correct,
+        "p_know_before":  round(p_know_before, 3),
+        "p_know_after":   round(new_state.p_know, 3),
+        "next_review_due": new_state.next_review_due.isoformat(),
+    }
 
 
 # ---------------------------------------------------------------------------

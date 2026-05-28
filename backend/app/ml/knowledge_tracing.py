@@ -45,6 +45,7 @@ SCHEDULE_INTERVALS = [
 BASE_INTERVAL_DAYS = 1.0
 SLOW_ANSWER_THRESHOLD_MS = 5000
 SLOW_ANSWER_PENALTY = 0.80  # reduce interval by 20% if answer was slow
+EASY_BONUS_MULTIPLIER = 1.5  # extend interval by 50% for "Easy" self-rating
 
 
 @dataclass
@@ -83,6 +84,7 @@ def update(
     state: ItemKnowledgeState,
     correct: bool,
     latency_ms: int,
+    easy_bonus: bool = False,
 ) -> ItemKnowledgeState:
     """
     Apply one BKT observation and return the updated state.
@@ -116,7 +118,7 @@ def update(
 
     # 4. Schedule next review
     now = datetime.now(timezone.utc)
-    next_due = _schedule_next(p_know_new, correct, latency_ms, now)
+    next_due = _schedule_next(p_know_new, correct, latency_ms, now, easy_bonus=easy_bonus)
 
     return ItemKnowledgeState(
         item_id=state.item_id,
@@ -136,6 +138,7 @@ def _schedule_next(
     correct: bool,
     latency_ms: int,
     now: datetime,
+    easy_bonus: bool = False,
 ) -> datetime:
     """Compute next review datetime from updated p_know."""
     multiplier = BASE_INTERVAL_DAYS
@@ -147,9 +150,11 @@ def _schedule_next(
     if not correct:
         # Wrong answer → review soon regardless of p_know
         multiplier = 0.25
-
-    if latency_ms > SLOW_ANSWER_THRESHOLD_MS:
-        multiplier *= SLOW_ANSWER_PENALTY
+    else:
+        if latency_ms > SLOW_ANSWER_THRESHOLD_MS:
+            multiplier *= SLOW_ANSWER_PENALTY
+        if easy_bonus:
+            multiplier *= EASY_BONUS_MULTIPLIER
 
     interval_hours = multiplier * 24.0
     return now + timedelta(hours=interval_hours)

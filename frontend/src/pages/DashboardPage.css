@@ -203,6 +203,138 @@
   color: #fff;
 }
 
+/* ── Kana foundation card ── */
+.dash-card--kana {
+  margin-bottom: 16px;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 28px;
+  cursor: pointer;
+}
+
+.dash-kana-samples {
+  font-size: 2.8rem;
+  font-family: 'MS Gothic', monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ── Modal ── */
+.dash-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.dash-modal {
+  background: rgba(15, 15, 28, 0.98);
+  border: 1px solid rgba(72, 219, 251, 0.2);
+  border-radius: 20px;
+  padding: 32px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 0 60px rgba(72, 219, 251, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dash-modal-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.dash-modal-sub {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 0 12px;
+}
+
+.dash-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.dash-modal-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+}
+
+.dash-modal-opt:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dash-modal-opt:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dash-modal-opt--guide:hover:not(:disabled) { border-color: rgba(255, 159, 67, 0.4); }
+.dash-modal-opt--hira:hover:not(:disabled)  { border-color: rgba(72, 219, 251, 0.4); }
+.dash-modal-opt--kata:hover:not(:disabled)  { border-color: rgba(29, 209, 161, 0.4); }
+
+.dash-modal-opt-icon {
+  font-size: 1.6rem;
+  font-family: 'MS Gothic', monospace;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
+.dash-modal-opt-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  display: block;
+}
+
+.dash-modal-opt-desc {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  display: block;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.dash-modal-close {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.85rem;
+  padding: 8px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.dash-modal-close:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
 /* ── Responsive ── */
 @media (max-width: 720px) {
   .dash-header {

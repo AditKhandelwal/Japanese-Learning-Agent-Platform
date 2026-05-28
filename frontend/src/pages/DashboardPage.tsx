@@ -5,6 +5,7 @@ import './DashboardPage.css'
 
 interface Props {
   onStartSession: (mode: string, sessionId: string, userId: string) => void
+  onKanaGuide: () => void
 }
 
 interface UserInfo {
@@ -73,9 +74,10 @@ function getGreeting() {
   return 'Good evening'
 }
 
-export default function DashboardPage({ onStartSession }: Props) {
+export default function DashboardPage({ onStartSession, onKanaGuide }: Props) {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [starting, setStarting] = useState<string | null>(null)
+  const [showKanaModal, setShowKanaModal] = useState(false)
 
   useEffect(() => {
     getOrCreateMe().then(setUser).catch(() => {})
@@ -94,6 +96,18 @@ export default function DashboardPage({ onStartSession }: Props) {
 
   async function handleSignOut() {
     await supabase.auth.signOut()
+  }
+
+  async function handleKanaStart(kanaMode: 'hiragana' | 'katakana') {
+    if (!user || starting) return
+    setStarting(kanaMode)
+    setShowKanaModal(false)
+    try {
+      const session = await startSession(user.id, kanaMode)
+      onStartSession(kanaMode, session.id, user.id)
+    } catch {
+      setStarting(null)
+    }
   }
 
   const featured = MODES.filter(m => m.featured)
@@ -126,6 +140,29 @@ export default function DashboardPage({ onStartSession }: Props) {
             {getGreeting()}{user ? `, ${user.username}` : ''}.
           </h1>
           <p className="dash-subtext">What would you like to practice today?</p>
+        </div>
+
+        {/* Kana foundation card */}
+        <div
+          className="dash-card dash-card--kana"
+          style={{ '--glow': 'rgba(72, 219, 251, 0.12)', '--border': 'rgba(72, 219, 251, 0.25)' } as CSSProperties}
+          onClick={() => !starting && setShowKanaModal(true)}
+        >
+          <div className="dash-kana-samples">
+            <span style={{ background: 'linear-gradient(135deg, #48dbfb, #1dd1a1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>あア</span>
+          </div>
+          <div className="dash-card-body">
+            <h2 className="dash-card-name">Hiragana &amp; Katakana</h2>
+            <p className="dash-card-desc">Master the two phonetic alphabets — the foundation of all Japanese reading and writing.</p>
+          </div>
+          <button
+            className="dash-start-btn"
+            style={{ background: 'linear-gradient(135deg, #48dbfb, #1dd1a1)' }}
+            onClick={e => { e.stopPropagation(); if (!starting) setShowKanaModal(true) }}
+            disabled={!!starting}
+          >
+            Study →
+          </button>
         </div>
 
         {/* Featured modes: Lesson + Recall */}
@@ -186,6 +223,37 @@ export default function DashboardPage({ onStartSession }: Props) {
           ))}
         </div>
       </main>
+      {/* Kana mode selector modal */}
+      {showKanaModal && (
+        <div className="dash-modal-overlay" onClick={() => setShowKanaModal(false)}>
+          <div className="dash-modal" onClick={e => e.stopPropagation()}>
+            <h2 className="dash-modal-title">Hiragana &amp; Katakana</h2>
+            <p className="dash-modal-sub">Choose how you'd like to study</p>
+
+            <div className="dash-modal-options">
+              <button className="dash-modal-opt dash-modal-opt--guide" onClick={() => { setShowKanaModal(false); onKanaGuide() }}>
+                <span className="dash-modal-opt-icon">📖</span>
+                <span className="dash-modal-opt-name">Introduction Guide</span>
+                <span className="dash-modal-opt-desc">Learn what kana is and tips for memorising characters</span>
+              </button>
+
+              <button className="dash-modal-opt dash-modal-opt--hira" onClick={() => handleKanaStart('hiragana')} disabled={!!starting}>
+                <span className="dash-modal-opt-icon">ひ</span>
+                <span className="dash-modal-opt-name">{starting === 'hiragana' ? 'Starting…' : 'Hiragana Practice'}</span>
+                <span className="dash-modal-opt-desc">All 46 hiragana characters — loops until you end the session</span>
+              </button>
+
+              <button className="dash-modal-opt dash-modal-opt--kata" onClick={() => handleKanaStart('katakana')} disabled={!!starting}>
+                <span className="dash-modal-opt-icon">カ</span>
+                <span className="dash-modal-opt-name">{starting === 'katakana' ? 'Starting…' : 'Katakana Practice'}</span>
+                <span className="dash-modal-opt-desc">All 46 katakana characters — loops until you end the session</span>
+              </button>
+            </div>
+
+            <button className="dash-modal-close" onClick={() => setShowKanaModal(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

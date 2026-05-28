@@ -96,6 +96,38 @@ TOOL_DEFINITIONS = [
             "required": ["item_ids"],
         },
     },
+    {
+        "name": "grade_response",
+        "description": (
+            "Record the user's answer and update their BKT knowledge state for that item. "
+            "Call this after YOU have evaluated whether the user's answer is correct. "
+            "You decide correct=true/false; the tool persists the result and reschedules review. "
+            "For fuzzy answers (production, reading), use your judgment — partial credit = correct=true. "
+            "Always call this before moving to the next item."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "item_id": {
+                    "type": "string",
+                    "description": "ID of the item just answered",
+                },
+                "correct": {
+                    "type": "boolean",
+                    "description": "True if the user demonstrated knowledge of the item",
+                },
+                "latency_ms": {
+                    "type": "integer",
+                    "description": "Approximate response time in ms (estimate based on conversation pace; use 0 if unknown)",
+                },
+                "user_answer": {
+                    "type": "string",
+                    "description": "The user's verbatim answer, for the response log",
+                },
+            },
+            "required": ["item_id", "correct", "latency_ms"],
+        },
+    },
 ]
 
 SYSTEM_PROMPT = """You are Sensei, an adaptive Japanese language tutor powered by a Bayesian Knowledge Tracing model.
@@ -231,6 +263,17 @@ class AgentOrchestrator:
 
             case "introduce_items":
                 return await T.introduce_items(self.db, self.user_id, inputs["item_ids"])
+
+            case "grade_response":
+                return await T.grade_response(
+                    db=self.db,
+                    user_id=self.user_id,
+                    session_id=session_id or "",
+                    item_id=inputs["item_id"],
+                    correct=inputs["correct"],
+                    latency_ms=inputs.get("latency_ms", 0),
+                    user_answer=inputs.get("user_answer", ""),
+                )
 
             case _:
                 return {"error": f"Unknown tool: {name}"}

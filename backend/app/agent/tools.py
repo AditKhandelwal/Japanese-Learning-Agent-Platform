@@ -153,46 +153,44 @@ async def get_weak_patterns(
 
 async def get_next_lesson_topic(db: AsyncSession, user_id: str) -> dict:
     """
-    Find the next item or group of items to introduce via lesson mode.
-    Returns the lowest JLPT level that has unintroduced items.
+    Find the next items to teach in lesson mode.
+    Targets items with review_count=0 and p_know<0.5 (unreviewed, not self-assessed as known).
+    Ordered by JLPT level ascending so N5 comes before N4, etc.
+    Skips kana levels — those have a dedicated practice mode.
     """
-    LEVEL_ORDER = ["hiragana", "katakana", "N5", "N4", "N3", "N2", "N1"]
+    LEVEL_ORDER = ["N5", "N4", "N3", "N2", "N1"]
 
     for level in LEVEL_ORDER:
-        # Check if there are items at this level not yet introduced for this user
-        introduced_ids_result = await db.execute(
-            select(UserItemState.item_id)
+        result = await db.execute(
+            select(UserItemState, Item)
+            .join(Item, UserItemState.item_id == Item.id)
             .where(UserItemState.user_id == user_id)
-            .where(UserItemState.introduced == True)  # noqa: E712
-        )
-        introduced_ids = {row[0] for row in introduced_ids_result.all()}
-
-        unintroduced = await db.execute(
-            select(Item)
             .where(Item.jlpt_level == level)
-            .where(~Item.id.in_(introduced_ids))
+            .where(UserItemState.review_count == 0)
+            .where(UserItemState.p_know < 0.5)
+            .order_by(UserItemState.p_know.asc())
             .limit(5)
         )
-        items = unintroduced.scalars().all()
+        rows = result.all()
 
-        if items:
+        if rows:
             return {
-                "level":        level,
+                "level": level,
                 "items_to_introduce": [
                     {
-                        "item_id":  i.id,
-                        "japanese": i.japanese,
-                        "reading":  i.reading,
-                        "meaning":  i.meaning,
-                        "type":     i.type,
-                        "tags":     i.tags or [],
-                        "examples": (i.examples or [])[:2],
+                        "item_id":  item.id,
+                        "japanese": item.japanese,
+                        "reading":  item.reading,
+                        "meaning":  item.meaning,
+                        "type":     item.type,
+                        "tags":     item.tags or [],
+                        "examples": (item.examples or [])[:2],
                     }
-                    for i in items
+                    for _state, item in rows
                 ],
             }
 
-    return {"message": "All items have been introduced. Great work!"}
+    return {"message": "All items at your current level have been reviewed. Great work!"}
 
 
 # ---------------------------------------------------------------------------
@@ -266,13 +264,18 @@ async def introduce_items(
                 item_id=item_id,
                 p_know=initial.p_know,
                 introduced=True,
-                next_review_due=now + timedelta(hours=4),   # first review in 4 hours
+                next_review_due=now + timedelta(hours=4),
                 updated_at=now,
             ))
             introduced.append(item_id)
-        elif not existing.introduced:
+        else:
+            # Row exists (seeded during onboarding). If the item has never been
+            # reviewed, scheduling a first review 4 hours from now so the lesson
+            # actually puts it in the queue.
             existing.introduced = True
             existing.updated_at = now
+            if existing.review_count == 0:
+                existing.next_review_due = now + timedelta(hours=4)
             introduced.append(item_id)
 
     await db.commit()

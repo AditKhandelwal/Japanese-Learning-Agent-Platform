@@ -1,6 +1,43 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { streamChat, type ChatEvent } from '../lib/api'
 import './SessionPage.css'
+
+// ── Lightweight markdown renderer ──────────────────────────────────────────
+function renderInline(text: string): ReactNode[] {
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>
+    if (part.startsWith('*') && part.endsWith('*'))   return <em key={i}>{part.slice(1, -1)}</em>
+    if (part.startsWith('`') && part.endsWith('`'))   return <code key={i} className="sess-code">{part.slice(1, -1)}</code>
+    // Preserve \n as <br> within a line group
+    return part.split('\n').reduce<ReactNode[]>((acc, seg, j) => {
+      if (j > 0) acc.push(<br key={`br-${i}-${j}`} />)
+      acc.push(seg)
+      return acc
+    }, [])
+  })
+}
+
+function renderMarkdown(text: string): ReactNode {
+  const blocks = text.split(/\n{2,}/)
+  return blocks.map((block, bi) => {
+    const lines = block.split('\n')
+    const isBullet = lines.every(l => /^[-*•]\s/.test(l) || l.trim() === '')
+    const isNum    = lines.every(l => /^\d+\.\s/.test(l) || l.trim() === '')
+
+    if (isBullet) return (
+      <ul key={bi} className="sess-md-list">
+        {lines.filter(l => l.trim()).map((l, j) => <li key={j}>{renderInline(l.replace(/^[-*•]\s+/, ''))}</li>)}
+      </ul>
+    )
+    if (isNum) return (
+      <ol key={bi} className="sess-md-list">
+        {lines.filter(l => l.trim()).map((l, j) => <li key={j}>{renderInline(l.replace(/^\d+\.\s+/, ''))}</li>)}
+      </ol>
+    )
+    return <p key={bi} className="sess-md-p">{renderInline(block)}</p>
+  })
+}
 
 const MODE_META: Record<string, { name: string; kanji: string; gradient: string; glow: string; border: string }> = {
   lesson:       { name: 'Lesson',       kanji: '学', gradient: 'linear-gradient(135deg, #ff6b9d, #ff9f43)', glow: 'rgba(255, 107, 157, 0.15)', border: 'rgba(255, 107, 157, 0.3)' },
@@ -161,8 +198,9 @@ export default function SessionPage({ sessionId, userId, mode, onEnd }: Props) {
                     {meta.kanji}
                   </div>
                   <div className="sess-bubble sess-bubble--agent">
-                    {msg.content}
-                    {msg.streaming && <span className="sess-cursor" />}
+                    {msg.streaming
+                      ? <>{msg.content}<span className="sess-cursor" /></>
+                      : renderMarkdown(msg.content)}
                   </div>
                 </div>
               )

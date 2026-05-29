@@ -1,14 +1,16 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getOrCreateMe } from './lib/api'
+import { getOrCreateMe, startSession } from './lib/api'
 import type { Session } from '@supabase/supabase-js'
 import LoginPage from './pages/LoginPage'
 import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
 import SessionPage from './pages/SessionPage'
 import RecallPage from './pages/RecallPage'
+import KanaGuidePage from './pages/KanaGuidePage'
+import ProgressPage from './pages/ProgressPage'
 
-type AppState = 'loading' | 'login' | 'onboarding' | 'dashboard' | 'session' | 'kana-guide'
+type AppState = 'loading' | 'login' | 'onboarding' | 'dashboard' | 'session' | 'kana-guide' | 'progress'
 
 interface ActiveSession {
   sessionId: string
@@ -20,6 +22,7 @@ export default function App() {
   const [, setSession] = useState<Session | null>(null)
   const [appState, setAppState] = useState<AppState>('loading')
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string>('')
 
   // Prevents the onAuthStateChange fired by signUp from advancing state.
   // LoginPage sets this before signup so we stay on the login page after account creation.
@@ -29,6 +32,7 @@ export default function App() {
     if (!s) { setAppState('login'); return }
     try {
       const user = await getOrCreateMe()
+      setCurrentUserId(user.id)
       setAppState(user.onboarding_done ? 'dashboard' : 'onboarding')
     } catch {
       setAppState('login')
@@ -41,13 +45,20 @@ export default function App() {
       loadUser(session)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (skipNextAuthEvent.current) {
         skipNextAuthEvent.current = false
         return
       }
-      setSession(session)
-      loadUser(session)
+      if (event === 'SIGNED_IN') {
+        setSession(session)
+        loadUser(session)
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null)
+        setCurrentUserId('')
+        setAppState('login')
+      }
+      // Ignore TOKEN_REFRESHED, INITIAL_SESSION, USER_UPDATED — don't reset app state
     })
 
     return () => subscription.unsubscribe()
@@ -63,22 +74,39 @@ export default function App() {
     setAppState('dashboard')
   }
 
+  async function handleKanaGuideStart(mode: 'hiragana' | 'katakana') {
+    try {
+      const user = await getOrCreateMe()
+      const session = await startSession(user.id, mode)
+      handleStartSession(mode, session.id, user.id)
+    } catch {
+      setAppState('dashboard')
+    }
+  }
+
   if (appState === 'loading') return null
   if (appState === 'login') return <LoginPage onSignUpComplete={() => { skipNextAuthEvent.current = true }} />
   if (appState === 'onboarding') return <OnboardingPage onComplete={() => setAppState('dashboard')} />
   if (appState === 'kana-guide') {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a14', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Segoe UI, system-ui, sans-serif', gap: 16 }}>
-        <p style={{ fontSize: '3rem', fontFamily: 'MS Gothic, monospace' }}>あア</p>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Kana Guide — Coming Soon</h1>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>Full guide with charts and tips is being built.</p>
-        <button onClick={() => setAppState('dashboard')} style={{ marginTop: 8, padding: '10px 28px', background: 'linear-gradient(135deg,#48dbfb,#1dd1a1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Back to Dashboard</button>
-      </div>
+      <KanaGuidePage
+        onBack={() => setAppState('dashboard')}
+        onStartPractice={handleKanaGuideStart}
+      />
+    )
+  }
+
+  if (appState === 'progress') {
+    return (
+      <ProgressPage
+        userId={currentUserId}
+        onBack={() => setAppState('dashboard')}
+      />
     )
   }
 
   if (appState === 'session' && activeSession) {
-    if (['recall', 'hiragana', 'katakana'].includes(activeSession.mode)) {
+    if (['recall', 'kanji', 'hiragana', 'katakana'].includes(activeSession.mode)) {
       return (
         <RecallPage
           sessionId={activeSession.sessionId}
@@ -98,5 +126,5 @@ export default function App() {
     )
   }
 
-  return <DashboardPage onStartSession={handleStartSession} onKanaGuide={() => setAppState('kana-guide')} />
+  return <DashboardPage onStartSession={handleStartSession} onKanaGuide={() => setAppState('kana-guide')} onProgress={() => setAppState('progress')} />
 }

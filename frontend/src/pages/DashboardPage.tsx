@@ -6,6 +6,7 @@ import './DashboardPage.css'
 interface Props {
   onStartSession: (mode: string, sessionId: string, userId: string) => void
   onKanaGuide: () => void
+  onProgress: () => void
 }
 
 interface UserInfo {
@@ -23,7 +24,6 @@ const MODES = [
     gradient: 'linear-gradient(135deg, #ff6b9d, #ff9f43)',
     glow: 'rgba(255, 107, 157, 0.2)',
     border: 'rgba(255, 107, 157, 0.3)',
-    featured: true,
   },
   {
     id: 'recall',
@@ -33,7 +33,15 @@ const MODES = [
     gradient: 'linear-gradient(135deg, #ff9f43, #e056fd)',
     glow: 'rgba(255, 159, 67, 0.2)',
     border: 'rgba(255, 159, 67, 0.3)',
-    featured: true,
+  },
+  {
+    id: 'grammar',
+    kanji: '文',
+    name: 'Grammar Drill',
+    description: 'Fill-in-the-blank exercises targeting grammar patterns you find most difficult.',
+    gradient: 'linear-gradient(135deg, #f9ca24, #f0932b)',
+    glow: 'rgba(249, 202, 36, 0.15)',
+    border: 'rgba(249, 202, 36, 0.25)',
   },
   {
     id: 'reading',
@@ -43,7 +51,6 @@ const MODES = [
     gradient: 'linear-gradient(135deg, #e056fd, #48dbfb)',
     glow: 'rgba(224, 86, 253, 0.15)',
     border: 'rgba(224, 86, 253, 0.25)',
-    featured: false,
   },
   {
     id: 'production',
@@ -53,7 +60,6 @@ const MODES = [
     gradient: 'linear-gradient(135deg, #48dbfb, #1dd1a1)',
     glow: 'rgba(72, 219, 251, 0.15)',
     border: 'rgba(72, 219, 251, 0.25)',
-    featured: false,
   },
   {
     id: 'conversation',
@@ -63,7 +69,6 @@ const MODES = [
     gradient: 'linear-gradient(135deg, #1dd1a1, #ff6b9d)',
     glow: 'rgba(29, 209, 161, 0.15)',
     border: 'rgba(29, 209, 161, 0.25)',
-    featured: false,
   },
 ]
 
@@ -74,10 +79,11 @@ function getGreeting() {
   return 'Good evening'
 }
 
-export default function DashboardPage({ onStartSession, onKanaGuide }: Props) {
+export default function DashboardPage({ onStartSession, onKanaGuide, onProgress }: Props) {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [starting, setStarting] = useState<string | null>(null)
   const [showKanaModal, setShowKanaModal] = useState(false)
+  const [showRecallModal, setShowRecallModal] = useState(false)
 
   useEffect(() => {
     getOrCreateMe().then(setUser).catch(() => {})
@@ -110,8 +116,18 @@ export default function DashboardPage({ onStartSession, onKanaGuide }: Props) {
     }
   }
 
-  const featured = MODES.filter(m => m.featured)
-  const secondary = MODES.filter(m => !m.featured)
+  async function handleRecallStart(recallMode: 'recall' | 'kanji') {
+    if (!user || starting) return
+    setStarting(recallMode)
+    setShowRecallModal(false)
+    try {
+      const session = await startSession(user.id, recallMode)
+      onStartSession(recallMode, session.id, user.id)
+    } catch {
+      setStarting(null)
+    }
+  }
+
 
   return (
     <div className="dash-root">
@@ -129,6 +145,7 @@ export default function DashboardPage({ onStartSession, onKanaGuide }: Props) {
                 : user.username}
             </span>
           )}
+          <button className="dash-progress-btn" onClick={onProgress}>Progress</button>
           <button className="dash-signout" onClick={handleSignOut}>Sign out</button>
         </div>
       </header>
@@ -165,16 +182,13 @@ export default function DashboardPage({ onStartSession, onKanaGuide }: Props) {
           </button>
         </div>
 
-        {/* Featured modes: Lesson + Recall */}
-        <div className="dash-featured-grid">
-          {featured.map(mode => (
+        {/* All modes — 2×3 grid */}
+        <div className="dash-modes-grid">
+          {MODES.map(mode => (
             <div
               key={mode.id}
-              className="dash-card dash-card--featured"
-              style={{
-                '--glow': mode.glow,
-                '--border': mode.border,
-              } as CSSProperties}
+              className="dash-card"
+              style={{ '--glow': mode.glow, '--border': mode.border } as CSSProperties}
             >
               <div className="dash-card-kanji" style={{ background: mode.gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                 {mode.kanji}
@@ -186,35 +200,7 @@ export default function DashboardPage({ onStartSession, onKanaGuide }: Props) {
               <button
                 className="dash-start-btn"
                 style={{ background: mode.gradient }}
-                onClick={() => handleStart(mode.id)}
-                disabled={!!starting}
-              >
-                {starting === mode.id ? 'Starting…' : 'Begin →'}
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Secondary modes */}
-        <div className="dash-secondary-grid">
-          {secondary.map(mode => (
-            <div
-              key={mode.id}
-              className="dash-card dash-card--secondary"
-              style={{
-                '--glow': mode.glow,
-                '--border': mode.border,
-              } as CSSProperties}
-            >
-              <div className="dash-card-kanji dash-card-kanji--sm" style={{ background: mode.gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                {mode.kanji}
-              </div>
-              <h2 className="dash-card-name">{mode.name}</h2>
-              <p className="dash-card-desc">{mode.description}</p>
-              <button
-                className="dash-start-btn dash-start-btn--outline"
-                style={{ '--btn-gradient': mode.gradient } as CSSProperties}
-                onClick={() => handleStart(mode.id)}
+                onClick={() => mode.id === 'recall' ? setShowRecallModal(true) : handleStart(mode.id)}
                 disabled={!!starting}
               >
                 {starting === mode.id ? 'Starting…' : 'Begin →'}
@@ -251,6 +237,36 @@ export default function DashboardPage({ onStartSession, onKanaGuide }: Props) {
             </div>
 
             <button className="dash-modal-close" onClick={() => setShowKanaModal(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Recall mode selector modal */}
+      {showRecallModal && (
+        <div className="dash-modal-overlay" onClick={() => setShowRecallModal(false)}>
+          <div className="dash-modal" onClick={e => e.stopPropagation()}>
+            <h2 className="dash-modal-title">Recall</h2>
+            <p className="dash-modal-sub">What would you like to review?</p>
+
+            <div className="dash-modal-options">
+              <button className="dash-modal-opt dash-modal-opt--vocab" onClick={() => handleRecallStart('recall')} disabled={!!starting}>
+                <span className="dash-modal-opt-icon">復</span>
+                <span>
+                  <span className="dash-modal-opt-name">{starting === 'recall' ? 'Starting…' : 'Vocab'}</span>
+                  <span className="dash-modal-opt-desc">SRS flashcards for vocabulary items due for review</span>
+                </span>
+              </button>
+
+              <button className="dash-modal-opt dash-modal-opt--kanji" onClick={() => handleRecallStart('kanji')} disabled={!!starting}>
+                <span className="dash-modal-opt-icon">漢</span>
+                <span>
+                  <span className="dash-modal-opt-name">{starting === 'kanji' ? 'Starting…' : 'Kanji'}</span>
+                  <span className="dash-modal-opt-desc">Kanji recognition with on/kun readings — bidirectional once mastered</span>
+                </span>
+              </button>
+            </div>
+
+            <button className="dash-modal-close" onClick={() => setShowRecallModal(false)}>Cancel</button>
           </div>
         </div>
       )}

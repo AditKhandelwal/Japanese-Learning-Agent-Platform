@@ -275,6 +275,39 @@
   margin: 0 auto;
 }
 
+.sess-ime-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: 'MS Gothic', 'Noto Sans JP', monospace;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sess-ime-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sess-ime-btn--on {
+  background: rgba(72, 219, 251, 0.1);
+  border-color: rgba(72, 219, 251, 0.4);
+  color: #48dbfb;
+}
+
+.sess-ime-btn--on:hover {
+  background: rgba(72, 219, 251, 0.15);
+  color: #48dbfb;
+}
+
 .sess-textarea {
   flex: 1;
   background: rgba(15, 15, 28, 0.9);

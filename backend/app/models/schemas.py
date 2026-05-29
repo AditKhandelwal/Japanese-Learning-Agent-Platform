@@ -22,11 +22,13 @@ class JLPTLevel(str, Enum):
 class SessionMode(str, Enum):
     lesson = "lesson"
     recall = "recall"
+    kanji = "kanji"
     hiragana = "hiragana"
     katakana = "katakana"
     production = "production"
     conversation = "conversation"
     reading = "reading"
+    grammar = "grammar"
     assessment = "assessment"
 
 

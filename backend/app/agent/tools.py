@@ -61,24 +61,33 @@ async def get_review_queue(
     scored.sort(key=lambda x: (_LEVEL_ORDER.get(x[1].jlpt_level, 7), -x[2]))
     top = scored[:n]
 
-    return {
-        "items": [
-            {
-                "item_id":       item.id,
-                "japanese":      item.japanese,
-                "reading":       item.reading,
-                "meaning":       item.meaning,
-                "type":          item.type,
-                "jlpt_level":    item.jlpt_level,
-                "tags":          item.tags or [],
-                "p_know":        round(state.p_know, 3),
-                "priority_score": round(score, 3),
-                "review_count":  state.review_count,
-            }
-            for state, item, score in top
-        ],
-        "total_due": len(scored),
-    }
+    def _direction(review_count: int) -> str:
+        # Recognition until 3 reviews; then alternate each review
+        if review_count < 3 or review_count % 2 == 0:
+            return "recognition"
+        return "recall"
+
+    items_out = []
+    for state, item, score in top:
+        entry: dict = {
+            "item_id":        item.id,
+            "japanese":       item.japanese,
+            "reading":        item.reading,
+            "meaning":        item.meaning,
+            "type":           item.type,
+            "jlpt_level":     item.jlpt_level,
+            "tags":           item.tags or [],
+            "p_know":         round(state.p_know, 3),
+            "priority_score": round(score, 3),
+            "review_count":   state.review_count,
+            "direction":      _direction(state.review_count),
+        }
+        if item.type == "kanji" and item.extra:
+            entry["onyomi"]  = item.extra.get("onyomi", [])
+            entry["kunyomi"] = item.extra.get("kunyomi", [])
+        items_out.append(entry)
+
+    return {"items": items_out, "total_due": len(scored)}
 
 
 # ---------------------------------------------------------------------------

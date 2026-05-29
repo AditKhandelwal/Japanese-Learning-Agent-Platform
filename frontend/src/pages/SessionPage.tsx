@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { streamChat, type ChatEvent } from '../lib/api'
+import { toHiragana } from 'wanakana'
 import './SessionPage.css'
+
+const IME_MODES = new Set(['grammar', 'production', 'conversation', 'reading'])
 
 // ── Lightweight markdown renderer ──────────────────────────────────────────
 function renderInline(text: string): ReactNode[] {
@@ -40,11 +43,12 @@ function renderMarkdown(text: string): ReactNode {
 }
 
 const MODE_META: Record<string, { name: string; kanji: string; gradient: string; glow: string; border: string }> = {
-  lesson:       { name: 'Lesson',       kanji: '学', gradient: 'linear-gradient(135deg, #ff6b9d, #ff9f43)', glow: 'rgba(255, 107, 157, 0.15)', border: 'rgba(255, 107, 157, 0.3)' },
-  recall:       { name: 'Recall',       kanji: '復', gradient: 'linear-gradient(135deg, #ff9f43, #e056fd)', glow: 'rgba(255, 159, 67, 0.15)',  border: 'rgba(255, 159, 67, 0.3)'  },
-  reading:      { name: 'Reading',      kanji: '読', gradient: 'linear-gradient(135deg, #e056fd, #48dbfb)', glow: 'rgba(224, 86, 253, 0.15)',  border: 'rgba(224, 86, 253, 0.25)' },
-  production:   { name: 'Production',   kanji: '書', gradient: 'linear-gradient(135deg, #48dbfb, #1dd1a1)', glow: 'rgba(72, 219, 251, 0.15)',  border: 'rgba(72, 219, 251, 0.25)' },
-  conversation: { name: 'Conversation', kanji: '話', gradient: 'linear-gradient(135deg, #1dd1a1, #ff6b9d)', glow: 'rgba(29, 209, 161, 0.15)',  border: 'rgba(29, 209, 161, 0.25)' },
+  lesson:       { name: 'Lesson',        kanji: '学', gradient: 'linear-gradient(135deg, #ff6b9d, #ff9f43)', glow: 'rgba(255, 107, 157, 0.15)', border: 'rgba(255, 107, 157, 0.3)' },
+  recall:       { name: 'Recall',        kanji: '復', gradient: 'linear-gradient(135deg, #ff9f43, #e056fd)', glow: 'rgba(255, 159, 67, 0.15)',  border: 'rgba(255, 159, 67, 0.3)'  },
+  grammar:      { name: 'Grammar Drill', kanji: '文', gradient: 'linear-gradient(135deg, #f9ca24, #f0932b)', glow: 'rgba(249, 202, 36, 0.15)',  border: 'rgba(249, 202, 36, 0.25)' },
+  reading:      { name: 'Reading',       kanji: '読', gradient: 'linear-gradient(135deg, #e056fd, #48dbfb)', glow: 'rgba(224, 86, 253, 0.15)',  border: 'rgba(224, 86, 253, 0.25)' },
+  production:   { name: 'Production',    kanji: '書', gradient: 'linear-gradient(135deg, #48dbfb, #1dd1a1)', glow: 'rgba(72, 219, 251, 0.15)',  border: 'rgba(72, 219, 251, 0.25)' },
+  conversation: { name: 'Conversation',  kanji: '話', gradient: 'linear-gradient(135deg, #1dd1a1, #ff6b9d)', glow: 'rgba(29, 209, 161, 0.15)',  border: 'rgba(29, 209, 161, 0.25)' },
 }
 
 type Message =
@@ -64,9 +68,11 @@ const uid = () => String(++_seq)
 
 export default function SessionPage({ sessionId, userId, mode, onEnd }: Props) {
   const meta = MODE_META[mode] ?? MODE_META.lesson
+  const showIme = IME_MODES.has(mode)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
+  const [imeEnabled, setImeEnabled] = useState(false)
   const busyRef = useRef(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -145,7 +151,8 @@ export default function SessionPage({ sessionId, userId, mode, onEnd }: Props) {
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setInput(e.target.value)
+    const raw = e.target.value
+    setInput(imeEnabled ? toHiragana(raw, { IMEMode: true }) : raw)
     const ta = e.target
     ta.style.height = 'auto'
     ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`
@@ -223,10 +230,24 @@ export default function SessionPage({ sessionId, userId, mode, onEnd }: Props) {
       {/* Input */}
       <footer className="sess-footer">
         <div className="sess-input-row">
+          {showIme && (
+            <button
+              className={`sess-ime-btn ${imeEnabled ? 'sess-ime-btn--on' : ''}`}
+              onClick={() => setImeEnabled(e => !e)}
+              title={imeEnabled ? 'Switch to English input' : 'Switch to Japanese input (romaji → kana)'}
+              type="button"
+            >
+              あ
+            </button>
+          )}
           <textarea
             ref={textareaRef}
             className="sess-textarea"
-            placeholder={busy ? 'Sensei is responding…' : 'Type your answer or ask a question… (Enter to send)'}
+            placeholder={
+              busy ? 'Sensei is responding…'
+              : imeEnabled ? 'Type romaji → converts to hiragana (e.g. "nihon" → にほん)'
+              : 'Type your answer or ask a question… (Enter to send)'
+            }
             rows={1}
             value={input}
             onChange={handleInputChange}

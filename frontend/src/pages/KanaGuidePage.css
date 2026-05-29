@@ -1,0 +1,373 @@
+.kg-root {
+  min-height: 100vh;
+  background: #0a0a14;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #fff;
+}
+
+/* ── Header ── */
+.kg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.kg-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.kg-logo-ja {
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff6b9d, #ff9f43, #e056fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.kg-logo-en {
+  font-size: 0.72rem;
+  letter-spacing: 0.25em;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+}
+
+.kg-title-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(72, 219, 251, 0.25);
+  border-radius: 10px;
+  padding: 6px 18px;
+  box-shadow: 0 0 20px rgba(72, 219, 251, 0.08);
+}
+
+.kg-title-kana {
+  font-size: 1.3rem;
+  font-family: 'MS Gothic', monospace;
+  font-weight: 700;
+  background: linear-gradient(135deg, #48dbfb, #1dd1a1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.kg-title-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.04em;
+}
+
+.kg-back-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.kg-back-btn:hover {
+  border-color: rgba(72, 219, 251, 0.4);
+  color: #48dbfb;
+}
+
+/* ── Main ── */
+.kg-main {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 32px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+}
+
+.kg-section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.kg-section-sub {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 0 24px;
+}
+
+/* ── Intro ── */
+.kg-intro-body {
+  font-size: 0.97rem;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.75;
+  max-width: 680px;
+  margin: 0 0 28px;
+}
+
+.kg-intro-body strong { color: #fff; }
+.kg-intro-body em     { color: rgba(255, 255, 255, 0.8); font-style: normal; font-weight: 600; }
+
+.kg-intro-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 680px;
+}
+
+.kg-intro-card {
+  background: rgba(15, 15, 28, 0.9);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kg-intro-card--hira { border: 1px solid rgba(72, 219, 251, 0.2); box-shadow: 0 0 32px rgba(72, 219, 251, 0.05); }
+.kg-intro-card--kata { border: 1px solid rgba(29, 209, 161, 0.2); box-shadow: 0 0 32px rgba(29, 209, 161, 0.05); }
+
+.kg-intro-card-kana {
+  font-size: 1.6rem;
+  font-family: 'MS Gothic', monospace;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.kg-intro-card--hira .kg-intro-card-kana { color: #48dbfb; }
+.kg-intro-card--kata .kg-intro-card-kana { color: #1dd1a1; }
+
+.kg-intro-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.kg-intro-card-desc {
+  font-size: 0.83rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.55;
+}
+
+.kg-intro-card-example {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kg-example-word {
+  font-size: 1.3rem;
+  font-family: 'MS Gothic', monospace;
+  font-weight: 700;
+  color: #fff;
+}
+
+.kg-example-gloss {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Charts ── */
+.kg-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.kg-chart-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 16px;
+  letter-spacing: 0.03em;
+}
+
+.kg-grid {
+  display: grid;
+  grid-template-columns: 28px repeat(5, 1fr);
+  gap: 5px;
+}
+
+.kg-cell {
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  transition: background 0.12s;
+}
+
+.kg-cell--corner {}
+
+.kg-cell--header {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  min-height: 24px;
+}
+
+.kg-cell--label {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.06em;
+  justify-content: center;
+}
+
+.kg-cell--char {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: default;
+  gap: 3px;
+}
+
+.kg-cell--char:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.kg-cell--empty {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.kg-kana {
+  font-size: 1.35rem;
+  font-family: 'MS Gothic', 'Noto Sans JP', monospace;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.kg-romaji {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.04em;
+}
+
+/* ── Tips ── */
+.kg-tips-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.kg-tip {
+  display: flex;
+  gap: 16px;
+  background: rgba(15, 15, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.kg-tip-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(72, 219, 251, 0.1);
+  border: 1px solid rgba(72, 219, 251, 0.2);
+  color: #48dbfb;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kg-tip-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.kg-tip-body {
+  font-size: 0.83rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.6;
+}
+
+/* ── CTA ── */
+.kg-cta {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 32px;
+  background: rgba(15, 15, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+}
+
+.kg-cta-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.kg-cta-sub {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+  max-width: 400px;
+}
+
+.kg-cta-btns {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.kg-cta-btn {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.kg-cta-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.kg-cta-btn--hira { background: linear-gradient(135deg, #48dbfb, #1dd1a1); }
+.kg-cta-btn--kata { background: linear-gradient(135deg, #1dd1a1, #48dbfb); }
+
+/* ── Responsive ── */
+@media (max-width: 760px) {
+  .kg-header { padding: 14px 16px; }
+  .kg-logo-en { display: none; }
+  .kg-main { padding: 32px 16px 60px; gap: 48px; }
+
+  .kg-intro-cards  { grid-template-columns: 1fr; }
+  .kg-charts-grid  { grid-template-columns: 1fr; }
+  .kg-tips-grid    { grid-template-columns: 1fr; }
+
+  .kg-cell--char { min-height: 44px; }
+  .kg-kana { font-size: 1.1rem; }
+}

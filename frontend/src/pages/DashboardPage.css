@@ -48,6 +48,22 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+.dash-progress-btn {
+  background: none;
+  border: 1px solid rgba(72, 219, 251, 0.25);
+  border-radius: 6px;
+  color: rgba(72, 219, 251, 0.7);
+  font-size: 0.8rem;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.dash-progress-btn:hover {
+  border-color: rgba(72, 219, 251, 0.5);
+  color: #48dbfb;
+}
+
 .dash-signout {
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -89,16 +105,8 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* ── Featured cards (Lesson + Recall) ── */
-.dash-featured-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-/* ── Secondary cards (Reading, Production, Conversation) ── */
-.dash-secondary-grid {
+/* ── Mode cards 3×2 grid ── */
+.dash-modes-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
@@ -124,20 +132,11 @@
   transform: translateY(-2px);
 }
 
-/* Featured card extras */
-.dash-card--featured {
-  padding: 32px;
-}
-
 .dash-card-kanji {
-  font-size: 3.5rem;
+  font-size: 2.8rem;
   font-family: 'MS Gothic', monospace;
   font-weight: 700;
   line-height: 1;
-}
-
-.dash-card-kanji--sm {
-  font-size: 2.4rem;
 }
 
 .dash-card-body {
@@ -145,24 +144,16 @@
 }
 
 .dash-card-name {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #fff;
   margin-bottom: 6px;
 }
 
-.dash-card--secondary .dash-card-name {
-  font-size: 1rem;
-}
-
 .dash-card-desc {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.45);
   line-height: 1.55;
-}
-
-.dash-card--secondary .dash-card-desc {
-  font-size: 0.82rem;
 }
 
 /* ── Buttons ── */
@@ -187,20 +178,6 @@
 .dash-start-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-/* Outline variant for secondary cards */
-.dash-start-btn--outline {
-  background: transparent !important;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.82rem;
-  padding: 8px 16px;
-}
-
-.dash-start-btn--outline:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #fff;
 }
 
 /* ── Kana foundation card ── */
@@ -290,9 +267,11 @@
   cursor: not-allowed;
 }
 
-.dash-modal-opt--guide:hover:not(:disabled) { border-color: rgba(255, 159, 67, 0.4); }
-.dash-modal-opt--hira:hover:not(:disabled)  { border-color: rgba(72, 219, 251, 0.4); }
-.dash-modal-opt--kata:hover:not(:disabled)  { border-color: rgba(29, 209, 161, 0.4); }
+.dash-modal-opt--guide:hover:not(:disabled)  { border-color: rgba(255, 159, 67, 0.4); }
+.dash-modal-opt--hira:hover:not(:disabled)   { border-color: rgba(72, 219, 251, 0.4); }
+.dash-modal-opt--kata:hover:not(:disabled)   { border-color: rgba(29, 209, 161, 0.4); }
+.dash-modal-opt--vocab:hover:not(:disabled)  { border-color: rgba(255, 159, 67, 0.4); }
+.dash-modal-opt--kanji:hover:not(:disabled)  { border-color: rgba(224, 86, 253, 0.4); }
 
 .dash-modal-opt-icon {
   font-size: 1.6rem;
@@ -349,11 +328,7 @@
     font-size: 1.5rem;
   }
 
-  .dash-featured-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dash-secondary-grid {
+  .dash-modes-grid {
     grid-template-columns: 1fr;
   }
 }

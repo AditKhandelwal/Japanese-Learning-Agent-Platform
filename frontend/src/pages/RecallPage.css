@@ -265,6 +265,91 @@
   right: 20px;
 }
 
+/* ── Direction label (recall mode front) ── */
+.recall-card-direction-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 159, 67, 0.55);
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── Meaning on front (recall direction) ── */
+.recall-card-meaning--front {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  line-height: 1.3;
+  max-width: 80%;
+}
+
+/* ── Meaning small on back (recall direction confirmation) ── */
+.recall-card-meaning--confirm {
+  font-size: 0.9rem !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* ── Kanji on/kun readings (front face — blur until hover) ── */
+.recall-kanji-readings {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  filter: blur(5px);
+  transition: filter 0.2s ease;
+  cursor: default;
+}
+
+.recall-kanji-readings:hover {
+  filter: blur(0);
+}
+
+.recall-kanji-on {
+  font-size: 1rem;
+  font-family: 'MS Gothic', monospace;
+  color: var(--recall-accent);
+  letter-spacing: 0.08em;
+}
+
+.recall-kanji-kun {
+  font-size: 0.9rem;
+  font-family: 'MS Gothic', monospace;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.06em;
+}
+
+/* ── Kanji readings on back face (labeled, visible) ── */
+.recall-kanji-readings--back {
+  filter: none !important;
+  cursor: default;
+  margin-top: 6px;
+}
+
+.recall-kanji-reading-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: 'MS Gothic', monospace;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.recall-kanji-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: rgba(255, 159, 67, 0.6);
+  background: rgba(255, 159, 67, 0.08);
+  border: 1px solid rgba(255, 159, 67, 0.2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.04em;
+}
+
 /* ── Reveal button ── */
 .recall-reveal-btn {
   padding: 12px 40px;

@@ -20,6 +20,7 @@ interface SessionStats {
 
 const MODE_META: Record<string, { kanji: string; name: string }> = {
   recall:   { kanji: '復', name: 'Vocab Recall' },
+  kanji:    { kanji: '漢', name: 'Kanji' },
   hiragana: { kanji: 'ひ', name: 'Hiragana' },
   katakana: { kanji: 'カ', name: 'Katakana' },
 }
@@ -34,6 +35,7 @@ export default function RecallPage({ sessionId, userId, mode, onEnd }: Props) {
   const cardStartRef = useRef<number>(Date.now())
 
   const isKana = mode === 'hiragana' || mode === 'katakana'
+  const isKanjiMode = mode === 'kanji'
   const meta = MODE_META[mode] ?? MODE_META.recall
 
   useEffect(() => {
@@ -43,14 +45,19 @@ export default function RecallPage({ sessionId, userId, mode, onEnd }: Props) {
   async function loadQueue(drill = false) {
     setCardState('loading')
     try {
-      const { items, total_due } = await getRecallQueue(userId, isKana ? {
-        jlptLevel: mode,
-        ignoreDue: drill,
-        n: 60,
-      } : {
-        excludeKana: true,
-        n: 20,
-      })
+      const { items, total_due } = await getRecallQueue(userId,
+        isKana ? {
+          jlptLevel: mode,
+          ignoreDue: drill,
+          n: 60,
+        } : isKanjiMode ? {
+          itemType: 'kanji',
+          n: 20,
+        } : {
+          excludeKana: true,
+          n: 20,
+        }
+      )
       setTotalDue(total_due)
       if (items.length === 0) {
         setCardState('empty')
@@ -99,6 +106,8 @@ export default function RecallPage({ sessionId, userId, mode, onEnd }: Props) {
 
   const current = cards[0] ?? null
   const readingIsKana = current ? /[぀-ヿ]/.test(current.reading ?? '') : false
+  const isKanji = current?.type === 'kanji'
+  const isRecall = current?.direction === 'recall'
   const progressPct = isKana
     ? ((stats.done % (totalDue || 1)) / (totalDue || 1)) * 100
     : totalDue > 0 ? (stats.done / (totalDue + stats.again)) * 100 : 0
@@ -195,7 +204,27 @@ export default function RecallPage({ sessionId, userId, mode, onEnd }: Props) {
               <div className="recall-card-face">
                 <span className="recall-card-type">{current.type}</span>
                 <span className="recall-card-jlpt">{current.jlpt_level}</span>
-                {readingIsKana ? (
+
+                {isRecall ? (
+                  // Recall direction: show meaning → produce Japanese
+                  <>
+                    <div className="recall-card-direction-label">→ write</div>
+                    <div className="recall-card-meaning recall-card-meaning--front">{current.meaning}</div>
+                  </>
+                ) : isKanji ? (
+                  // Kanji recognition: show kanji + hover-to-reveal readings
+                  <>
+                    <div className="recall-card-japanese">{current.japanese}</div>
+                    <div className="recall-kanji-readings">
+                      {current.onyomi && current.onyomi.length > 0 && (
+                        <span className="recall-kanji-on">{current.onyomi.join('・')}</span>
+                      )}
+                      {current.kunyomi && current.kunyomi.length > 0 && (
+                        <span className="recall-kanji-kun">{current.kunyomi.join('・')}</span>
+                      )}
+                    </div>
+                  </>
+                ) : readingIsKana ? (
                   <>
                     <div className="recall-card-japanese">{current.reading}</div>
                     <div className="recall-card-kanji-sub">{current.japanese}</div>
@@ -203,7 +232,10 @@ export default function RecallPage({ sessionId, userId, mode, onEnd }: Props) {
                 ) : (
                   <div className="recall-card-japanese">{current.japanese}</div>
                 )}
-                <div className="recall-card-hint">tap to reveal</div>
+
+                <div className="recall-card-hint">
+                  {isKanji && !isRecall ? 'tap to reveal • hover for readings' : 'tap to reveal'}
+                </div>
                 <div className="recall-card-p-know">p={current.p_know.toFixed(2)}</div>
               </div>
 
@@ -211,12 +243,51 @@ export default function RecallPage({ sessionId, userId, mode, onEnd }: Props) {
               <div className="recall-card-face recall-card-back">
                 <span className="recall-card-type">{current.type}</span>
                 <span className="recall-card-jlpt">{current.jlpt_level}</span>
-                <div className="recall-card-japanese--sm">{current.japanese}</div>
-                {current.reading && current.reading !== current.japanese && (
-                  <div className="recall-card-reading">{current.reading}</div>
+
+                {isKanji ? (
+                  // Kanji back: kanji + labeled readings + meaning
+                  <>
+                    <div className="recall-card-japanese--sm">{current.japanese}</div>
+                    <div className="recall-kanji-readings recall-kanji-readings--back">
+                      {current.onyomi && current.onyomi.length > 0 && (
+                        <div className="recall-kanji-reading-row">
+                          <span className="recall-kanji-label">音</span>
+                          <span>{current.onyomi.join('・')}</span>
+                        </div>
+                      )}
+                      {current.kunyomi && current.kunyomi.length > 0 && (
+                        <div className="recall-kanji-reading-row">
+                          <span className="recall-kanji-label">訓</span>
+                          <span>{current.kunyomi.join('・')}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="recall-divider" />
+                    <div className="recall-card-meaning">{current.meaning}</div>
+                  </>
+                ) : isRecall ? (
+                  // Recall back: show Japanese prominently (that's the answer)
+                  <>
+                    <div className="recall-card-japanese">{readingIsKana ? current.reading : current.japanese}</div>
+                    {readingIsKana && <div className="recall-card-kanji-sub">{current.japanese}</div>}
+                    {current.reading && !readingIsKana && current.reading !== current.japanese && (
+                      <div className="recall-card-reading">{current.reading}</div>
+                    )}
+                    <div className="recall-divider" />
+                    <div className="recall-card-meaning recall-card-meaning--confirm">{current.meaning}</div>
+                  </>
+                ) : (
+                  // Recognition back: japanese small + reading + meaning
+                  <>
+                    <div className="recall-card-japanese--sm">{current.japanese}</div>
+                    {current.reading && current.reading !== current.japanese && (
+                      <div className="recall-card-reading">{current.reading}</div>
+                    )}
+                    <div className="recall-divider" />
+                    <div className="recall-card-meaning">{current.meaning}</div>
+                  </>
                 )}
-                <div className="recall-divider" />
-                <div className="recall-card-meaning">{current.meaning}</div>
+
                 <div className="recall-card-p-know">p={current.p_know.toFixed(2)}</div>
               </div>
             </div>

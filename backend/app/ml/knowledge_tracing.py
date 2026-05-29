@@ -18,11 +18,15 @@ from typing import Optional
 import math
 
 
-# Default BKT parameters (research-derived starting values)
+# BKT parameters tuned for language acquisition.
+# Language is "leaky" — high slip (forget even known words) and high guess
+# (correct answers are less diagnostic) forces more repetitions before mastery.
+# With these values ~5 consecutive correct answers reach "mastered" (p_know >= 0.80),
+# compared to only 3 with the original defaults.
 DEFAULT_P_INIT   = 0.30
-DEFAULT_P_LEARN  = 0.10
-DEFAULT_P_SLIP   = 0.10
-DEFAULT_P_GUESS  = 0.20
+DEFAULT_P_LEARN  = 0.025   # slow accumulation — language needs many exposures
+DEFAULT_P_SLIP   = 0.25    # 25% slip rate — reflects "use it or lose it" nature
+DEFAULT_P_GUESS  = 0.35    # high guess rate — model is skeptical of single correct answers
 
 # p_init overrides by JLPT level — easier levels start higher
 LEVEL_P_INIT: dict[str, float] = {
@@ -118,7 +122,7 @@ def update(
 
     # 4. Schedule next review
     now = datetime.now(timezone.utc)
-    next_due = _schedule_next(p_know_new, correct, latency_ms, now, easy_bonus=easy_bonus)
+    next_due = _schedule_next(p_know_new, correct, latency_ms, now, easy_bonus=easy_bonus, review_count=new_review_count)
 
     return ItemKnowledgeState(
         item_id=state.item_id,
@@ -139,6 +143,7 @@ def _schedule_next(
     latency_ms: int,
     now: datetime,
     easy_bonus: bool = False,
+    review_count: int = 0,
 ) -> datetime:
     """Compute next review datetime from updated p_know."""
     multiplier = BASE_INTERVAL_DAYS
@@ -148,13 +153,18 @@ def _schedule_next(
             break
 
     if not correct:
-        # Wrong answer → review soon regardless of p_know
         multiplier = 0.25
     else:
         if latency_ms > SLOW_ANSWER_THRESHOLD_MS:
             multiplier *= SLOW_ANSWER_PENALTY
         if easy_bonus:
             multiplier *= EASY_BONUS_MULTIPLIER
+
+    # Cap interval by review count — prevents items from disappearing for days
+    # after only a handful of reviews. Uncapped after 8 reviews.
+    if review_count < 8:
+        max_days = max(review_count * 0.5, 0.25)
+        multiplier = min(multiplier, max_days)
 
     interval_hours = multiplier * 24.0
     return now + timedelta(hours=interval_hours)

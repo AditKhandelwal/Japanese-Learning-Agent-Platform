@@ -108,11 +108,15 @@ export interface RecallItem {
   p_know: number
   priority_score: number
   review_count: number
+  direction: 'recognition' | 'recall'
+  onyomi?: string[]
+  kunyomi?: string[]
 }
 
 export interface RecallQueueOptions {
   n?: number
   excludeKana?: boolean
+  itemType?: string
   jlptLevel?: string
   ignoreDue?: boolean
 }
@@ -123,10 +127,11 @@ export async function getRecallQueue(
 ): Promise<{ items: RecallItem[]; total_due: number }> {
   const headers = await authHeaders()
   const params = new URLSearchParams({ user_id: userId })
-  if (options.n)          params.set('n',            String(options.n))
+  if (options.n)            params.set('n',            String(options.n))
   if (options.excludeKana) params.set('exclude_kana', 'true')
-  if (options.jlptLevel)  params.set('jlpt_level',   options.jlptLevel)
-  if (options.ignoreDue)  params.set('ignore_due',   'true')
+  if (options.itemType)    params.set('item_type',    options.itemType)
+  if (options.jlptLevel)   params.set('jlpt_level',   options.jlptLevel)
+  if (options.ignoreDue)   params.set('ignore_due',   'true')
   const res = await fetch(`${API_URL}/api/sessions/queue?${params}`, { headers })
   if (!res.ok) throw new Error('Failed to fetch recall queue')
   return res.json()
@@ -141,6 +146,51 @@ export interface RateResult {
   p_know_before: number
   p_know_after: number
   next_review_due: string
+}
+
+export interface ProgressItem {
+  item_id: string
+  japanese: string
+  reading: string | null
+  meaning: string
+  type: string
+  jlpt_level: string
+  p_know: number
+  review_count: number
+}
+
+export interface LevelStat {
+  reviewed: number
+  total_items: number
+  avg_p_know: number
+  mastered: number
+  familiar: number
+  learning: number
+  weak: number
+}
+
+export interface ProgressResponse {
+  items: ProgressItem[]
+  total_reviewed: number
+  page: number
+  per_page: number
+  level_stats: Record<string, LevelStat>
+}
+
+export async function getProgress(params: {
+  itemType: string
+  jlptLevel?: string
+  page?: number
+  perPage?: number
+}): Promise<ProgressResponse> {
+  const headers = await authHeaders()
+  const p = new URLSearchParams({ item_type: params.itemType })
+  if (params.jlptLevel) p.set('jlpt_level', params.jlptLevel)
+  if (params.page)    p.set('page',     String(params.page))
+  if (params.perPage) p.set('per_page', String(params.perPage))
+  const res = await fetch(`${API_URL}/api/users/me/progress?${p}`, { headers })
+  if (!res.ok) throw new Error('Failed to fetch progress')
+  return res.json()
 }
 
 export async function rateItem(params: {
